@@ -286,9 +286,9 @@ class scMVI_tp2(tf.keras.Model):
                           _,lib_z_tp2 = xx
                           z_tp2 = self.get_latent(xx)
                           
-                          r_tp2_r,r_tp2_theta, r_tp2_drop = self.tp2_unb_prms(z_tp2)
+                          r_tp2_mu,r_tp2_theta, r_tp2_drop = self.tp2_unb_prms(z_tp2)
 
-                          tp2_smps = self.tp2_VAE.error_mdl(r_tp2_r,r_tp2_theta,r_tp2_drop,lib_z_tp2).sample()
+                          tp2_smps = self.tp2_VAE.error_mdl(r_tp2_mu,r_tp2_theta,r_tp2_drop,lib_z_tp2).sample()
 
                           return tp2_smps
 
@@ -318,11 +318,10 @@ class scMVI_tp2(tf.keras.Model):
                           lt_dir = Normals_tp2_grp1.sample(N_samps) - Normals_tp2_grp2.sample(N_samps)
                           lt_dir_0 = 0.0*lt_dir
                                     
-                          diff_dir_r_1,diff_dir_theta_1,_ = self.tp2_unb_prms(lt_dir)
-                          diff_dir_r_2,diff_dir_theta_2,_ = self.tp2_unb_prms(lt_dir_0)
-                
-                          col_tp2 = diff_dir_r_1+diff_dir_theta_1-(diff_dir_r_2+diff_dir_theta_2)
+                          tp2_diff_dir1,_,_ = self.tp2_unb_prms(lt_dir)
+                          tp2_diff_dir2,_,_ = self.tp2_unb_prms(lt_dir_0)
 
+                          col_tp2 = tp2_diff_dir1-tp2_diff_dir2
                           return col_tp2
 
             def train_step(self, x_tr):
@@ -334,12 +333,12 @@ class scMVI_tp2(tf.keras.Model):
                                             z_mean_tp2, z_log_var_tp2 = self.get_latent_params(x_tr)
                                             z_tp2 = self.sample_latent([z_mean_tp2, z_log_var_tp2])
 
-                                            r_tp2_r,r_tp2_theta, r_tp2_drop = self.tp2_unb_prms(z_tp2)
+                                            r_tp2_mu,r_tp2_theta, r_tp2_drop = self.tp2_unb_prms(z_tp2)
 
 
                                             reconstruction_loss_tp2 = tf.reduce_mean(
                                                 tf.reduce_sum(
-                                                    -self.tp2_VAE.error_mdl(r_tp2_r,r_tp2_theta,r_tp2_drop,lib_z_tp2).log_prob(data_tp2) ,axis=1
+                                                    -self.tp2_VAE.error_mdl(r_tp2_mu,r_tp2_theta,r_tp2_drop,lib_z_tp2).log_prob(data_tp2) ,axis=1
                                                 )
                                             )
 
@@ -367,10 +366,10 @@ class scMVI_tp2(tf.keras.Model):
                                         z_tp2 = self.sample_latent([z_mean_tp2, z_log_var_tp2])
 
 
-                                        r_tp2_r,r_tp2_theta, r_tp2_drop = self.tp2_unb_prms(z_tp2)
+                                        r_tp2_mu,r_tp2_theta, r_tp2_drop = self.tp2_unb_prms(z_tp2)
                                         reconstruction_loss_tp2 = tf.reduce_mean(
                                             tf.reduce_sum(
-                                                -self.tp2_VAE.error_mdl(r_tp2_r,r_tp2_theta,r_tp2_drop,lib_z_tp2).log_prob(data_tp2) ,axis=1
+                                                -self.tp2_VAE.error_mdl(r_tp2_mu,r_tp2_theta,r_tp2_drop,lib_z_tp2).log_prob(data_tp2) ,axis=1
                                             )
                                         )
 
@@ -506,11 +505,11 @@ class scMVI_NMT(tf.keras.Model):
 
                           r_met = self.met_unb_prms(z) 
                           r_acc = self.acc_unb_prms(z)  
-                          r_rna_r,r_rna_theta, r_rna_drop = self.rna_unb_prms(z)
+                          r_rna_mu,r_rna_theta, r_rna_drop = self.rna_unb_prms(z)
 
                           met_smps = self.met_VAE.error_mdl(r_met,data_cpg).sample()
                           acc_smps = self.acc_VAE.error_mdl(r_acc,data_gpc).sample()
-                          rna_smps = self.rna_VAE.error_mdl(r_rna_r,r_rna_theta,r_rna_drop,lib_z_rna).sample()
+                          rna_smps = self.rna_VAE.error_mdl(r_rna_mu,r_rna_theta,r_rna_drop,lib_z_rna).sample()
 
                           return met_smps,acc_smps, rna_smps
 
@@ -569,18 +568,18 @@ class scMVI_NMT(tf.keras.Model):
                           lt_dir = scMVI_NMT.comb_lt([Normals_met_grp1.sample(N_samps),Normals_acc_grp1.sample(N_samps),Normals_rna_grp1.sample(N_samps)],mod) - scMVI_NMT.comb_lt([Normals_met_grp2.sample(N_samps),Normals_acc_grp2.sample(N_samps),Normals_rna_grp2.sample(N_samps)],mod)#
                           lt_dir_0 = 0.0*lt_dir
                                     
-                          rna_diff_dir_r_1,rna_diff_dir_theta_1,_ = self.rna_unb_prms(lt_dir)
-                          rna_diff_dir_r_2,rna_diff_dir_theta_2,_ = self.rna_unb_prms(lt_dir_0)
+                          rna_diff_dir1,_,_ = self.rna_unb_prms(lt_dir)
+                          rna_diff_dir2,_,_ = self.rna_unb_prms(lt_dir_0)
 
                           acc_diff_dir1 = self.acc_unb_prms(lt_dir)
                           acc_diff_dir2 = self.acc_unb_prms(lt_dir_0)                          
 
                           met_diff_dir1 = self.met_unb_prms(lt_dir)
-                          met_diff_dir2 = self.met_unb_prms(lt_dir_0)     
+                          met_diff_dir2 = self.met_unb_prms(lt_dir_0)
 
-                          col_met = met_diff_dir1-met_diff_dir2
                           col_acc = acc_diff_dir1-acc_diff_dir2
-                          col_rna = rna_diff_dir_r_1+rna_diff_dir_theta_1-(rna_diff_dir_r_2+rna_diff_dir_theta_2)
+                          col_rna = rna_diff_dir1-rna_diff_dir2
+                          col_met = met_diff_dir1-met_diff_dir2
 
                           return col_met,col_acc,col_rna
 
@@ -597,7 +596,7 @@ class scMVI_NMT(tf.keras.Model):
 
                                             r_met = self.met_unb_prms(z_met)  
                                             r_acc = self.acc_unb_prms(z_acc)  
-                                            r_rna_r,r_rna_theta, r_rna_drop = self.rna_unb_prms(z_rna)
+                                            r_rna_mu,r_rna_theta, r_rna_drop = self.rna_unb_prms(z_rna)
 
                                             reconstruction_loss_met = tf.reduce_mean(
                                                 tf.reduce_sum( -self.met_VAE.error_mdl(r_met,data_cpg).log_prob(data_met) ,axis=1
@@ -610,7 +609,7 @@ class scMVI_NMT(tf.keras.Model):
                                             )
                                             reconstruction_loss_rna = tf.reduce_mean(
                                                 tf.reduce_sum(
-                                                    -self.rna_VAE.error_mdl(r_rna_r,r_rna_theta,r_rna_drop,lib_z_rna).log_prob(data_rna) ,axis=1
+                                                    -self.rna_VAE.error_mdl(r_rna_mu,r_rna_theta,r_rna_drop,lib_z_rna).log_prob(data_rna) ,axis=1
                                                 )
                                             )
 
@@ -643,7 +642,7 @@ class scMVI_NMT(tf.keras.Model):
 
                                         r_met = self.met_unb_prms(z_met)  
                                         r_acc = self.acc_unb_prms(z_acc)  
-                                        r_rna_r,r_rna_theta, r_rna_drop = self.rna_unb_prms(z_rna)
+                                        r_rna_mu,r_rna_theta, r_rna_drop = self.rna_unb_prms(z_rna)
 
                                         reconstruction_loss_met = tf.reduce_mean(
                                             tf.reduce_sum( -self.met_VAE.error_mdl(r_met,data_cpg).log_prob(data_met) ,axis=1
@@ -656,7 +655,7 @@ class scMVI_NMT(tf.keras.Model):
                                         )
                                         reconstruction_loss_rna = tf.reduce_mean(
                                             tf.reduce_sum(
-                                                -self.rna_VAE.error_mdl(r_rna_r,r_rna_theta,r_rna_drop,lib_z_rna).log_prob(data_rna) ,axis=1
+                                                -self.rna_VAE.error_mdl(r_rna_mu,r_rna_theta,r_rna_drop,lib_z_rna).log_prob(data_rna) ,axis=1
                                             )
                                         )
 
@@ -777,11 +776,11 @@ class scMVI_10X(tf.keras.Model):
                           z_acc,z_rna = self.get_latent(xx)
                           z = scMVI_10X.comb_lt([z_acc,z_rna],mod)
                           
-                          r_acc_r,r_acc_theta, r_acc_drop = self.acc_unb_prms(z)  
-                          r_rna_r,r_rna_theta, r_rna_drop = self.rna_unb_prms(z)
+                          r_acc_mu,r_acc_theta, r_acc_drop = self.acc_unb_prms(z)  
+                          r_rna_mu,r_rna_theta, r_rna_drop = self.rna_unb_prms(z)
 
-                          acc_smps = self.acc_VAE.error_mdl(r_acc_r,r_acc_theta,r_acc_drop,lib_z_acc).sample()
-                          rna_smps = self.rna_VAE.error_mdl(r_rna_r,r_rna_theta,r_rna_drop,lib_z_rna).sample()
+                          acc_smps = self.acc_VAE.error_mdl(r_acc_mu,r_acc_theta,r_acc_drop,lib_z_acc).sample()
+                          rna_smps = self.rna_VAE.error_mdl(r_rna_mu,r_rna_theta,r_rna_drop,lib_z_rna).sample()
 
                           return acc_smps, rna_smps
 
@@ -824,15 +823,14 @@ class scMVI_10X(tf.keras.Model):
                           lt_dir = scMVI_10X.comb_lt([Normals_acc_grp1.sample(N_samps),Normals_rna_grp1.sample(N_samps)],mod) - scMVI_10X.comb_lt([Normals_acc_grp2.sample(N_samps),Normals_rna_grp2.sample(N_samps)],mod)#
                           lt_dir_0 = 0.0*lt_dir
                                     
-                          rna_diff_dir_r_1,rna_diff_dir_theta_1,_ = self.rna_unb_prms(lt_dir)
-                          rna_diff_dir_r_2,rna_diff_dir_theta_2,_ = self.rna_unb_prms(lt_dir_0)
+                          rna_diff_dir1,_,_ = self.rna_unb_prms(lt_dir)
+                          rna_diff_dir2,_,_ = self.rna_unb_prms(lt_dir_0)
 
-                          acc_diff_dir_r_1,acc_diff_dir_theta_1,_ = self.acc_unb_prms(lt_dir)
-                          acc_diff_dir_r_2,acc_diff_dir_theta_2,_ = self.acc_unb_prms(lt_dir_0)                          
+                          acc_diff_dir1,_,_ = self.acc_unb_prms(lt_dir)
+                          acc_diff_dir2,_,_ = self.acc_unb_prms(lt_dir_0)                          
 
-                          col_acc = acc_diff_dir_r_1+acc_diff_dir_theta_1-(acc_diff_dir_r_2+acc_diff_dir_theta_2)
-                          col_rna = rna_diff_dir_r_1+rna_diff_dir_theta_1-(rna_diff_dir_r_2+rna_diff_dir_theta_2)
-
+                          col_acc = acc_diff_dir1-acc_diff_dir2
+                          col_rna = rna_diff_dir1-rna_diff_dir2
                           return col_acc,col_rna
 
 
@@ -846,18 +844,18 @@ class scMVI_10X(tf.keras.Model):
                                             z_acc,z_rna = self.sample_latent([z_mean_acc, z_log_var_acc,z_mean_rna, z_log_var_rna])
 
 
-                                            r_acc_r,r_acc_theta, r_acc_drop = self.acc_unb_prms(z_acc)  
-                                            r_rna_r,r_rna_theta, r_rna_drop = self.rna_unb_prms(z_rna)
+                                            r_acc_mu,r_acc_theta, r_acc_drop = self.acc_unb_prms(z_acc)  
+                                            r_rna_mu,r_rna_theta, r_rna_drop = self.rna_unb_prms(z_rna)
 
 
                                             reconstruction_loss_acc = tf.reduce_mean(
                                                 tf.reduce_sum(
-                                                    -self.acc_VAE.error_mdl(r_acc_r,r_acc_theta,r_acc_drop,lib_z_acc).log_prob(data_acc) ,axis=1
+                                                    -self.acc_VAE.error_mdl(r_acc_mu,r_acc_theta,r_acc_drop,lib_z_acc).log_prob(data_acc) ,axis=1
                                                 )
                                             )
                                             reconstruction_loss_rna = tf.reduce_mean(
                                                 tf.reduce_sum(
-                                                    -self.rna_VAE.error_mdl(r_rna_r,r_rna_theta,r_rna_drop,lib_z_rna).log_prob(data_rna) ,axis=1
+                                                    -self.rna_VAE.error_mdl(r_rna_mu,r_rna_theta,r_rna_drop,lib_z_rna).log_prob(data_rna) ,axis=1
                                                 )
                                             )
 
@@ -887,19 +885,19 @@ class scMVI_10X(tf.keras.Model):
                                         z_acc,z_rna = self.sample_latent([z_mean_acc, z_log_var_acc,z_mean_rna, z_log_var_rna])
 
 
-                                        r_acc_r,r_acc_theta, r_acc_drop = self.acc_unb_prms(z_acc)  
-                                        r_rna_r,r_rna_theta, r_rna_drop = self.rna_unb_prms(z_rna)
+                                        r_acc_mu,r_acc_theta, r_acc_drop = self.acc_unb_prms(z_acc)  
+                                        r_rna_mu,r_rna_theta, r_rna_drop = self.rna_unb_prms(z_rna)
 
 
                                         reconstruction_loss_acc = tf.reduce_mean(
                                             tf.reduce_sum(
-                                                -self.acc_VAE.error_mdl(r_acc_r,r_acc_theta,r_acc_drop,lib_z_acc).log_prob(data_acc) ,axis=1
+                                                -self.acc_VAE.error_mdl(r_acc_mu,r_acc_theta,r_acc_drop,lib_z_acc).log_prob(data_acc) ,axis=1
                                             )
                                         )
 
                                         reconstruction_loss_rna = tf.reduce_mean(
                                             tf.reduce_sum(
-                                                -self.rna_VAE.error_mdl(r_rna_r,r_rna_theta,r_rna_drop,lib_z_rna).log_prob(data_rna) ,axis=1
+                                                -self.rna_VAE.error_mdl(r_rna_mu,r_rna_theta,r_rna_drop,lib_z_rna).log_prob(data_rna) ,axis=1
                                             )
                                         )
 

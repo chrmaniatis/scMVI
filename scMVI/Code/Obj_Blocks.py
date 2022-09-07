@@ -12,13 +12,13 @@ def Bin_dist(mu_logit,total_cpgs):
 
 
 #Zero inflated Negative Binomial distribution error model
-def ZINB_dist(r_log,theta_lt,pi_lat,lib_log):
+def ZINB_dist(mu_log,theta_log,pi_lat,lib_log):
 
         tfd = tfp.distributions
 
         pi = tf.math.sigmoid(pi_lat)
-        r_fail = tf.math.exp(r_log)
-        p_suc = tf.math.sigmoid(theta_lt+lib_log)
+        r_fail = tf.math.exp(lib_log+mu_log+theta_log)
+        p_suc = tf.math.sigmoid(theta_log)
 
 
         pp = tf.stack([pi,1-pi],axis=-1)

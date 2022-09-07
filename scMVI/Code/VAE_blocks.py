@@ -144,10 +144,10 @@ class Dec_X_Proj(tf.keras.Model):
                                       
                               elif self.tp == 'tp2':
                     
-                                        decoder_outputs_tp2_r = tf.keras.layers.Dense(self.out_sz,activation='linear')(x_dec_proj)
+                                        decoder_outputs_tp2_mu = tf.keras.layers.Dense(self.out_sz,activation='linear')(x_dec_proj)
                                         decoder_outputs_tp2_theta = tf.keras.layers.Dense(self.out_sz,activation='linear')(x_dec_proj)
                                         decoder_outputs_tp2_drop = tf.keras.layers.Dense(self.out_sz,activation='linear')(x_dec_proj)
-                                        decoder_outputs_tp2 = [decoder_outputs_tp2_r,decoder_outputs_tp2_theta,decoder_outputs_tp2_drop]
+                                        decoder_outputs_tp2 = [decoder_outputs_tp2_mu,decoder_outputs_tp2_theta,decoder_outputs_tp2_drop]
                                         decoder_proj = tf.keras.Model(inputs = mdl_imp, outputs = decoder_outputs_tp2, name=self.mdl_name)
                               else:
                                         raise ValueError(
@@ -155,4 +155,5 @@ class Dec_X_Proj(tf.keras.Model):
                                                           )      
                     
                               return decoder_proj
+
 
